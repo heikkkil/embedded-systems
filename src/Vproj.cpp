@@ -22,9 +22,8 @@
 
 // TODO: insert other definitions and declarations here
 
-#include <cstring>
-#include <cstdio>
 
+#include "FanController.h"
 #include "ModbusMaster.h"
 #include "ModbusRegister.h"
 #include "LpcUart.h"
@@ -184,7 +183,7 @@ void abbModbusTest()
 		setFrequency(node, fa[i]);
 	}
 }
-#else
+
 bool setFrequency(ModbusMaster& node, uint16_t freq)
 {
 	int result;
@@ -270,8 +269,7 @@ void abbModbusTest()
 	}
 }
 #endif
-
-
+#if 0
 void modbusTest()
 {
 	ModbusMaster node(2); // Create modbus object that connects to slave id 2
@@ -305,7 +303,7 @@ void modbusTest()
 		Sleep(1000);
 	}
 }
-
+#endif
 
 
 /**
@@ -332,6 +330,8 @@ int main(void)
 	LpcUartConfig cfg = { LPC_USART0, 115200, UART_CFG_DATALEN_8 | UART_CFG_PARITY_NONE | UART_CFG_STOPLEN_1, false, txpin, rxpin, none, none };
 	LpcUart dbgu(cfg);
 
+	FanController fan_Controller(2);
+
 	/* Set up SWO to PIO1_2 */
 	Chip_SWM_MovablePortPinAssign(SWM_SWO_O, 1, 2); // Needed for SWO printf
 
@@ -343,7 +343,7 @@ int main(void)
 	printf("Started\n"); // goes to ITM console if retarget_itm.c is included
 	dbgu.write("Hello, world\n");
 
-	abbModbusTest();
+	fan_Controller.abbModbusTest();
 
 	return 1;
 }
