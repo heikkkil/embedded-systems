@@ -20,10 +20,19 @@ public:
 	FanController(int);
 	virtual ~FanController();
 	void abbModbusTest();
+	bool setFrequency(uint16_t);
 private:
-	bool setFrequency(ModbusMaster&, uint16_t);
+
 	ModbusMaster node;
+
+	ModbusRegister Speed;
+	ModbusRegister ControlWord;
+	ModbusRegister StatusWord;
+	ModbusRegister OutputFrequency;
+	ModbusRegister Current;
+	ModbusRegister Frequency;
 };
+
 
 #endif /* FANCONTROLLER_H_ */
 
