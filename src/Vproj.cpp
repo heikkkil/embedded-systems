@@ -22,10 +22,12 @@
 // TODO: insert other definitions and declarations here
 
 
-#include "FanController.h"
+#include "Fan.h"
 #include "ModbusMaster.h"
 #include "ModbusRegister.h"
 #include "LpcUart.h"
+#include "FanController.h"
+#include "I2C.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -104,8 +106,6 @@ int main(void)
 	LpcUartConfig cfg = { LPC_USART0, 115200, UART_CFG_DATALEN_8 | UART_CFG_PARITY_NONE | UART_CFG_STOPLEN_1, false, txpin, rxpin, none, none };
 	LpcUart dbgu(cfg);
 
-	FanController fan_Controller(2);
-
 	/* Set up SWO to PIO1_2 */
 	Chip_SWM_MovablePortPinAssign(SWM_SWO_O, 1, 2); // Needed for SWO printf
 
@@ -114,10 +114,11 @@ int main(void)
 	printf("Started\n"); // goes to ITM console if retarget_itm.c is included
 	dbgu.write("Hello, world\n");
 
+	I2C_config conf;
 
-	//fan_Controller.abbModbusTest();
+	FanController controller(conf, 50, 80);
+	controller.run();
 
-	fan_Controller.setFrequency(20000);
 	return 1;
 }
 
