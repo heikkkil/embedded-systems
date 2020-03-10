@@ -1,12 +1,12 @@
 /*
- * FanController.h
+ * Fan.h
  *
  *  Created on: Mar 6, 2020
  *      Author: User
  */
 
-#ifndef FANCONTROLLER_H_
-#define FANCONTROLLER_H_
+#ifndef FAN_H_
+#define FAN_H_
 
 #include "ModbusMaster.h"
 #include "ModbusRegister.h"
@@ -15,10 +15,10 @@
 
 extern void Sleep(int ms);
 
-class FanController {
+class Fan {
 public:
-	FanController(int);
-	virtual ~FanController();
+	Fan(int);
+	virtual ~Fan();
 	void abbModbusTest();
 	bool setFrequency(uint16_t);
 private:
@@ -34,6 +34,6 @@ private:
 };
 
 
-#endif /* FANCONTROLLER_H_ */
+#endif /* FAN_H_ */
 
 /* this function is required by the modbus library */
