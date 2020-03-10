@@ -12,9 +12,10 @@
 #define MANUAL false
 #define SENSOR_ADDRESS 0x40
 
-FanController::FanController(I2C_config conf, int initialTargetPressure = 80, int initialFanSpeed = 50) : fan(2), pressureSensor(SENSOR_ADDRESS, conf) {
+FanController::FanController(I2C_config conf, int initialTargetPressure = 80, int initialFanSpeed = 10000) : fan(2), pressureSensor(SENSOR_ADDRESS, conf) {
 	currentFanSpeed = initialFanSpeed;
 	targetPressure = initialTargetPressure;
+	autoOutOfLimits = 0;
 	mode = AUTO;
 }
 
@@ -23,34 +24,51 @@ FanController::~FanController() {
 }
 
 void FanController::run() {
-	if (mode == AUTO) {
-		automatic();
-	} /*else {
-		manual();
-	}*/
+	while(1) {
+		if (mode == AUTO) {
+			automatic();
+		} /*else {
+			manual();
+		}*/
+		Sleep(10);
+	}
 }
 
 void FanController::automatic() {
-	float ratio = pressureSensor.getPressure() / targetPressure*1.0;
-	if (ratio < 0.5) {
-		currentFanSpeed += 3;
-	} else if (ratio < 0.75) {
-		currentFanSpeed += 2;
-	} else if (ratio < 0.98) {
-		currentFanSpeed += 1;
-	} else if (ratio > 1.5) {
-		currentFanSpeed -= 3;
-	} else if (ratio > 1.25) {
-		currentFanSpeed -= 2;
-	} else if (ratio > 1.02) {
-		currentFanSpeed -= 1;
+	int pressure = pressureSensor.getPressure();
+	/*if (pressure > 150) {
+		pressure = 0;
+	}*/
+	int comp = targetPressure - pressure;
+
+	if (comp <= 3 && comp >= -3) {
+		autoOutOfLimits = 0;
+	} else {
+		++autoOutOfLimits;
 	}
-	if (currentFanSpeed < 0) {
+
+	if (autoOutOfLimits >= 3) {
+		if (comp <= 10 && comp >= -10) {
+			if (comp < 0) {
+				currentFanSpeed -= 100;
+			} else {
+				currentFanSpeed += 100;
+			}
+		} else {
+			if (comp < 0) {
+				currentFanSpeed -= 300;
+			} else {
+				currentFanSpeed += 300;
+			}
+		}
+	}
+
+	if (currentFanSpeed > 20000) {
+		currentFanSpeed = 20000;
+	} else if (currentFanSpeed < 0) {
 		currentFanSpeed = 0;
 	}
-	if (currentFanSpeed > 100) {
-		currentFanSpeed = 100;
-	}
-	printf("fan speed: %d\npressure: %d", currentFanSpeed, pressureSensor.getPressure());
-	fan.setFrequency(currentFanSpeed);
+
+	printf("fan speed: %d pressure: %d target: %d", currentFanSpeed, pressure, targetPressure);
+	fan.setNonRelativeFrequency(currentFanSpeed);
 }

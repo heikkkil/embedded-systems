@@ -25,6 +25,7 @@ private:
 	PressureSensor pressureSensor;
 	int targetPressure;
 	int currentFanSpeed;
+	int autoOutOfLimits;
 	void automatic();
 	void manual();
 };

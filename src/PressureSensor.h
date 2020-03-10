@@ -9,6 +9,7 @@
 #define PRESSURESENSOR_H_
 
 #include "I2C.h"
+#include <algorithm>
 
 class PressureSensor {
 public:
@@ -19,6 +20,9 @@ private:
 	uint8_t address;
 	I2C i2c;
 	uint16_t getRawMeasurement();
+	int measurementHistory[3];
+	int index;
+	int medianFilter();
 };
 
 #endif /* PRESSURESENSOR_H_ */

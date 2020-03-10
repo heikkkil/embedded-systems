@@ -21,6 +21,7 @@ public:
 	virtual ~Fan();
 	void abbModbusTest();
 	bool setFrequency(uint16_t);
+	bool setNonRelativeFrequency(int);
 private:
 
 	ModbusMaster node;
