@@ -5,15 +5,15 @@
  *      Author: Eelis
  */
 
-#ifndef PRESSUREREADER_H_
-#define PRESSUREREADER_H_
+#ifndef PRESSURESENSOR_H_
+#define PRESSURESENSOR_H_
 
 #include "I2C.h"
 
-class PressureReader {
+class PressureSensor {
 public:
-	PressureReader(uint8_t address, I2C_config conf);
-	virtual ~PressureReader();
+	PressureSensor(uint8_t address, I2C_config conf);
+	virtual ~PressureSensor();
 	int getPressure();
 private:
 	uint8_t address;
@@ -21,4 +21,4 @@ private:
 	uint16_t getRawMeasurement();
 };
 
-#endif /* PRESSUREREADER_H_ */
+#endif /* PRESSURESENSOR_H_ */
