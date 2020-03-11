@@ -23,6 +23,8 @@
 #define EVENT_BUFFER_SIZE 10
 
 #include <ring_buffer.h>
+#include <memory>
+#include <atomic>
 
 #include "LiquidCrystal.h"
 #include "SimpleMenu.h"
@@ -37,16 +39,20 @@
 /*****************************************************************************
  * Private types/enumerations/variables
  ****************************************************************************/
-static volatile int counter;
-static volatile uint32_t systicks;
+static volatile std::atomic_int counter;
+static volatile std::atomic_int systicks;
 
 //Array of type
 static enum MenuItem::menuEvent e_Buffer[EVENT_BUFFER_SIZE];
+
 /*****************************************************************************
  * Public types/enumerations/variables
  ****************************************************************************/
 
+//Ringbuffer frame
 RINGBUFF_T e_Ring;
+
+
 /*****************************************************************************
  * Private functions
  ****************************************************************************/
@@ -119,19 +125,18 @@ void PIN_INT3_IRQHandler(void){
 }
 #endif
 
+
 /**
  * @brief 	Pop events from buffer and call handling functions until buffer is empty.
- *
+ * @note	ptr_Event is an empty pointer where data will be saved, no need to worry about warning
  */
 void processEvents(SimpleMenu& menu){
 
 	while(!RingBuffer_IsEmpty(&e_Ring)){
-		enum MenuItem::menuEvent* ptr_Event;
-		RingBuffer_Pop(&e_Ring, ptr_Event);
+		enum MenuItem::menuEvent event;
+		RingBuffer_Pop(&e_Ring, &event);
 
-		menu.event(*ptr_Event);
-
-		printf("Processing events.");
+		menu.event(event);
 	}
 }
 
@@ -172,19 +177,19 @@ int main(void)
 	/* Set up SWO to PIO1_2 */
 	Chip_SWM_MovablePortPinAssign(SWM_SWO_O, 1, 2); // Needed for SWO printf
 
-	//Setup pin interrupts for 4 digitalIoPins
-	setup_Pin_Interrupts();
-
-	//Setup FanController
-	//I2C_config conf;
-	//FanController controller(conf, 50, 80);
-	Fan fan(2);
 
 	//Initialize menu buttons
 	DigitalIoPin SW1(0,0,true,true,true);
 	DigitalIoPin SW2(1,3,true,true,true);
 	DigitalIoPin SW3(0,10,true,true,true);
 	DigitalIoPin SW4(0,9,true,true,true);
+
+	//Setup pin interrupts for 4 digitalIoPins
+	setup_Pin_Interrupts();
+
+	//Setup FanController
+	I2C_config conf;
+	FanController controller(conf, 50, 80);
 
 
 	//Initialize Pins for LCD screen
@@ -199,16 +204,19 @@ int main(void)
 	setup_Pin_Interrupts();
 
 	Chip_RIT_Init(LPC_RITIMER);
-//	NVIC_EnableIRQ(RITIMER_IRQn);
+	//NVIC_EnableIRQ(RITIMER_IRQn);
 
 	//Initialize lcd screen
 	LiquidCrystal *lcd = new LiquidCrystal(&rs,&en,&d4,&d5,&d6,&d7);
+	lcd->setCursor(0,0);
 
 	SimpleMenu menu;
-	IntegerEdit *mode = new IntegerEdit(lcd, std::string("Mode"),0,1);
-	menu.addItem(new MenuItem(mode));
-	mode->setValue(0);
-
+	IntegerEdit* automatic = new IntegerEdit(lcd, std::string("Automatic"),0,100);
+	IntegerEdit* manual = new IntegerEdit(lcd, std::string("Manual"),0,150);
+	menu.addItem(new MenuItem(manual));
+	menu.addItem(new MenuItem(automatic));
+	automatic->setValue(50);
+	manual->setValue(50);
 
 	LpcPinMap none = {-1, -1}; // unused pin has negative values in it
 	LpcPinMap txpin = { 0, 18 }; // transmit pin that goes to debugger's UART->USB converter
@@ -226,9 +234,12 @@ int main(void)
 	//Add up-event into ring buffer
 	RingBuffer_Insert(&e_Ring, (void*)MenuItem::up);
 
+
 	while(1){
-		Sleep(100);
+		printf("Looping\n");
+
 		processEvents(menu);
+		Sleep(100);
 	}
 
 	return 1;
