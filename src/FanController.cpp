@@ -24,13 +24,14 @@ FanController::~FanController() {
 }
 
 void FanController::run() {
-	pressure = pressureSensor.getPressure();
-	//For some reason (int overlow?), when pressure is close to 0, it sometimes spikes to ~250
-	//normally pressure never gets over 200 so make all of those to 0
-	if (pressure > 200) {
-		pressure = 0;
-	}
-	while(1) {
+	while (1) {
+		pressure = pressureSensor.getPressure();
+		//For some reason (int overlow?), when pressure is close to 0, it sometimes spikes to ~250
+		//normally pressure never gets over 200 so make all of those to 0
+		if (pressure > 200) {
+			pressure = 0;
+		}
+
 		if (mode == AUTO) {
 			automatic();
 		} else {
@@ -43,18 +44,24 @@ void FanController::run() {
 void FanController::automatic() {
 	int comp = targetPressure - pressure;
 
-	if (comp <= 3 && comp >= -3) {
+	if (comp <= 2 && comp >= -2) {
 		autoOutOfLimits = 0;
 	} else {
 		++autoOutOfLimits;
 	}
 
-	if (autoOutOfLimits >= 3) {
+	if (autoOutOfLimits >= 2) {
 		if (comp <= 10 && comp >= -10) {
 			if (comp < 0) {
 				fanSpeed -= 100;
 			} else {
 				fanSpeed += 100;
+			}
+		} else if (comp >= 25 || comp <= -25) {
+			if (comp >= 25) {
+				fanSpeed += 1000;
+			} else {
+				fanSpeed -= 1000;
 			}
 		} else {
 			if (comp < 0) {
@@ -93,4 +100,16 @@ void FanController::setFanSpeed(int speed) {
 
 void FanController::setMode(bool m) {
 	mode = m;
+}
+
+int FanController::getPressure() {
+	return pressure;
+}
+
+int FanController::getFanSpeed() {
+	return fanSpeed;
+}
+
+bool FanController::getMode() {
+	return mode;
 }
