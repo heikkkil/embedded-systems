@@ -21,6 +21,7 @@
 
 // TODO: insert other definitions and declarations here
 #define EVENT_BUFFER_SIZE 10
+#define BOUNCER_LIMIT 100
 
 #include <ring_buffer.h>
 #include <memory>
@@ -40,7 +41,8 @@
  * Private types/enumerations/variables
  ****************************************************************************/
 static volatile std::atomic_int counter;
-static volatile std::atomic_int systicks;
+static volatile uint32_t systicks;
+static volatile uint32_t prev_systicks;
 
 //Array of type
 static enum MenuItem::menuEvent e_Buffer[EVENT_BUFFER_SIZE];
@@ -60,6 +62,33 @@ static void setup_Pin_Interrupts(){
 
 	Chip_PININT_Init(LPC_GPIO_PIN_INT);
 
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 0,
+							 (IOCON_DIGMODE_EN |(0x2<<3) |IOCON_MODE_INACT) );
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 3,
+							 (IOCON_DIGMODE_EN |(0x2<<3) |IOCON_MODE_INACT) );
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 9,
+							 (IOCON_DIGMODE_EN |(0x2<<3)| IOCON_MODE_INACT) );
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10,
+							 (IOCON_DIGMODE_EN |(0x2<<3)| IOCON_MODE_INACT) );
+
+	/* Configure GPIO pin as input */
+	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 0);
+
+	/* Configure GPIO pin as input */
+	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 1, 3);
+
+	/* Configure GPIO pin as input */
+	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 9);
+
+	/* Configure GPIO pin as input */
+	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 10);
+
+
+	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_PININT);
+
+	/* Reset the PININT block */
+	Chip_SYSCTL_PeriphReset(RESET_PININT);
+
 	//Link Interrupt channels to physical pins
 	Chip_INMUX_PinIntSel(0, 0, 0);
 	Chip_INMUX_PinIntSel(1, 1, 3);
@@ -67,18 +96,33 @@ static void setup_Pin_Interrupts(){
 	Chip_INMUX_PinIntSel(3, 0, 9);
 
 	//Clear interrupt status of pins
-	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0) | PININTCH(1) | PININTCH(2) | PININTCH(3));
-	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(0) | PININTCH(1) | PININTCH(2) | PININTCH(3));
-	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(0) | PININTCH(1) | PININTCH(2) | PININTCH(3));
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0));
+	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(0));
+	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(0));
+
+	//Clear interrupt status of pins
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(1));
+	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(1));
+	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(1));
+
+	//Clear interrupt status of pins
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(2));
+	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(2));
+	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(2));
+
+	//Clear interrupt status of pins
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(3));
+	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(3));
+	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(3));
 
 	//Enable IRQ's for pins
 	NVIC_ClearPendingIRQ(PIN_INT0_IRQn);
-	NVIC_ClearPendingIRQ(PIN_INT1_IRQn);
-	NVIC_ClearPendingIRQ(PIN_INT2_IRQn);
-	NVIC_ClearPendingIRQ(PIN_INT3_IRQn);
 	NVIC_EnableIRQ(PIN_INT0_IRQn);
+	NVIC_ClearPendingIRQ(PIN_INT1_IRQn);
 	NVIC_EnableIRQ(PIN_INT1_IRQn);
+	NVIC_ClearPendingIRQ(PIN_INT2_IRQn);
 	NVIC_EnableIRQ(PIN_INT2_IRQn);
+	NVIC_ClearPendingIRQ(PIN_INT3_IRQn);
 	NVIC_EnableIRQ(PIN_INT3_IRQn);
 
 }
@@ -102,22 +146,34 @@ void SysTick_Handler(void)
 
 void PIN_INT0_IRQHandler(void){
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(0));
-	RingBuffer_Insert(&e_Ring, (void*)MenuItem::up);
+	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
+		RingBuffer_Insert(&e_Ring, (void*)MenuItem::up);
+	}
+	prev_systicks = systicks;
 }
 
 void PIN_INT1_IRQHandler(void){
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(1));
-	RingBuffer_Insert(&e_Ring, (void*)MenuItem::ok);
+	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
+		RingBuffer_Insert(&e_Ring, (void*)MenuItem::ok);
+	}
+	prev_systicks = systicks;
 }
 
 void PIN_INT2_IRQHandler(void){
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(2));
-	RingBuffer_Insert(&e_Ring, (void*)MenuItem::down);
+	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
+		RingBuffer_Insert(&e_Ring, (void*)MenuItem::down);
+	}
+	prev_systicks = systicks;
 }
 
 void PIN_INT3_IRQHandler(void){
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
-	RingBuffer_Insert(&e_Ring, (void*)MenuItem::back);
+	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
+		RingBuffer_Insert(&e_Ring, (void*)MenuItem::back);
+	}
+	prev_systicks = systicks;
 }
 
 
@@ -178,18 +234,13 @@ int main(void)
 	Chip_SWM_MovablePortPinAssign(SWM_SWO_O, 1, 2); // Needed for SWO printf
 
 
-	//Initialize menu buttons
-	DigitalIoPin SW1(0,0,true,true,true);
-	DigitalIoPin SW2(1,3,true,true,true);
-	DigitalIoPin SW3(0,10,true,true,true);
-	DigitalIoPin SW4(0,9,true,true,true);
+	//Setup FanController
+	I2C_config conf;
+	FanController controller(conf, 50, 80);
 
 	//Setup pin interrupts for 4 digitalIoPins
 	setup_Pin_Interrupts();
 
-	//Setup FanController
-	I2C_config conf;
-	FanController controller(conf, 50, 80);
 
 
 	//Initialize Pins for LCD screen
@@ -231,15 +282,10 @@ int main(void)
 	//Ringbuffer frame is put on to create the ultimate ringbuffer.
 	RingBuffer_Init(&e_Ring,e_Buffer,sizeof(enum MenuItem::menuEvent),EVENT_BUFFER_SIZE);
 
-	//Add up-event into ring buffer
-	RingBuffer_Insert(&e_Ring, (void*)MenuItem::up);
-
-
 	while(1){
 		printf("Looping\n");
-
+		Sleep(10);
 		processEvents(menu);
-		Sleep(100);
 	}
 
 	return 1;
