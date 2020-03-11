@@ -20,33 +20,66 @@
 // TODO: insert other include files here
 
 // TODO: insert other definitions and declarations here
+#define EVENT_BUFFER_SIZE 10
 
+#include <ring_buffer.h>
 
+#include "LiquidCrystal.h"
+#include "SimpleMenu.h"
+#include "IntegerEdit.h"
+#include "FanController.h"
+#include "DigitalIoPin.h"
 #include "Fan.h"
 #include "ModbusMaster.h"
 #include "ModbusRegister.h"
 #include "LpcUart.h"
-#include "FanController.h"
-#include "I2C.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
  ****************************************************************************/
+static volatile int counter;
+static volatile uint32_t systicks;
 
+//Array of type
+static enum MenuItem::menuEvent e_Buffer[EVENT_BUFFER_SIZE];
 /*****************************************************************************
  * Public types/enumerations/variables
  ****************************************************************************/
 
+RINGBUFF_T e_Ring;
 /*****************************************************************************
  * Private functions
  ****************************************************************************/
+static void setup_Pin_Interrupts(){
 
+	Chip_PININT_Init(LPC_GPIO_PIN_INT);
+
+	//Link Interrupt channels to physical pins
+	Chip_INMUX_PinIntSel(0, 0, 0);
+	Chip_INMUX_PinIntSel(1, 1, 3);
+	Chip_INMUX_PinIntSel(2, 0, 10);
+	Chip_INMUX_PinIntSel(3, 0, 9);
+
+	//Clear interrupt status of pins
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0) | PININTCH(1) | PININTCH(2) | PININTCH(3));
+	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(0) | PININTCH(1) | PININTCH(2) | PININTCH(3));
+	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(0) | PININTCH(1) | PININTCH(2) | PININTCH(3));
+
+	//Enable IRQ's for pins
+	NVIC_ClearPendingIRQ(PIN_INT0_IRQn);
+	NVIC_ClearPendingIRQ(PIN_INT1_IRQn);
+	NVIC_ClearPendingIRQ(PIN_INT2_IRQn);
+	NVIC_ClearPendingIRQ(PIN_INT3_IRQn);
+	NVIC_EnableIRQ(PIN_INT0_IRQn);
+	NVIC_EnableIRQ(PIN_INT1_IRQn);
+	NVIC_EnableIRQ(PIN_INT2_IRQn);
+	NVIC_EnableIRQ(PIN_INT3_IRQn);
+
+}
 
 /*****************************************************************************
  * Public functions
  ****************************************************************************/
-static volatile int counter;
-static volatile uint32_t systicks;
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,9 +93,47 @@ void SysTick_Handler(void)
 	systicks++;
 	if(counter > 0) counter--;
 }
+
+void PIN_INT0_IRQHandler(void){
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(0));
+	RingBuffer_Insert(&e_Ring, (void*)MenuItem::up);
+}
+
+void PIN_INT1_IRQHandler(void){
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(1));
+	RingBuffer_Insert(&e_Ring, (void*)MenuItem::ok);
+}
+
+void PIN_INT2_IRQHandler(void){
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(2));
+	RingBuffer_Insert(&e_Ring, (void*)MenuItem::down);
+}
+
+void PIN_INT3_IRQHandler(void){
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
+	RingBuffer_Insert(&e_Ring, (void*)MenuItem::back);
+}
+
+
 #ifdef __cplusplus
 }
 #endif
+
+/**
+ * @brief 	Pop events from buffer and call handling functions until buffer is empty.
+ *
+ */
+void processEvents(SimpleMenu& menu){
+
+	while(!RingBuffer_IsEmpty(&e_Ring)){
+		enum MenuItem::menuEvent* ptr_Event;
+		RingBuffer_Pop(&e_Ring, ptr_Event);
+
+		menu.event(*ptr_Event);
+
+		printf("Processing events.");
+	}
+}
 
 void Sleep(int ms)
 {
@@ -92,32 +163,73 @@ int main(void)
 	// Set up and initialize all required blocks and
 	// functions related to the board hardware
 	Board_Init();
-	// Set the LED to the state of "On"
-	Board_LED_Set(0, true);
 #endif
 #endif
 
 	/* Enable and setup SysTick Timer at a periodic rate */
 	SysTick_Config(SystemCoreClock / 1000);
 
-	LpcPinMap none = {-1, -1}; // unused pin has negative values in it
-	LpcPinMap txpin = { 0, 18 }; // transmit pin that goes to debugger's UART->USB converter
-	LpcPinMap rxpin = { 0, 13 }; // receive pin that goes to debugger's UART->USB converter
-	LpcUartConfig cfg = { LPC_USART0, 115200, UART_CFG_DATALEN_8 | UART_CFG_PARITY_NONE | UART_CFG_STOPLEN_1, false, txpin, rxpin, none, none };
-	LpcUart dbgu(cfg);
-
 	/* Set up SWO to PIO1_2 */
 	Chip_SWM_MovablePortPinAssign(SWM_SWO_O, 1, 2); // Needed for SWO printf
 
-	Board_LED_Set(0, false);
-	Board_LED_Set(1, true);
-	printf("Started\n"); // goes to ITM console if retarget_itm.c is included
-	dbgu.write("Hello, world\n");
+	//Setup pin interrupts for 4 digitalIoPins
+	setup_Pin_Interrupts();
 
-	I2C_config conf;
+	//Setup FanController
+	//I2C_config conf;
+	//FanController controller(conf, 50, 80);
+	Fan fan(2);
 
-	FanController controller(conf, 50, 80);
-	controller.run();
+	//Initialize menu buttons
+	DigitalIoPin SW1(0,0,true,true,true);
+	DigitalIoPin SW2(1,3,true,true,true);
+	DigitalIoPin SW3(0,10,true,true,true);
+	DigitalIoPin SW4(0,9,true,true,true);
+
+
+	//Initialize Pins for LCD screen
+	DigitalIoPin rs(0,8,false,false,false);
+	DigitalIoPin en(1,6,false,false,false);
+	DigitalIoPin d4(1,8,false,false,false);
+	DigitalIoPin d5(0,5,false,false,false);
+	DigitalIoPin d6(0,6,false,false,false);
+	DigitalIoPin d7(0,7,false,false,false);
+
+	//Setup pin interrupts for 4 digitalIoPins
+	setup_Pin_Interrupts();
+
+	Chip_RIT_Init(LPC_RITIMER);
+//	NVIC_EnableIRQ(RITIMER_IRQn);
+
+	//Initialize lcd screen
+	LiquidCrystal *lcd = new LiquidCrystal(&rs,&en,&d4,&d5,&d6,&d7);
+
+	SimpleMenu menu;
+	IntegerEdit *mode = new IntegerEdit(lcd, std::string("Mode"),0,1);
+	menu.addItem(new MenuItem(mode));
+	mode->setValue(0);
+
+
+	LpcPinMap none = {-1, -1}; // unused pin has negative values in it
+	LpcPinMap txpin = { 0, 18 }; // transmit pin that goes to debugger's UART->USB converter
+	LpcPinMap rxpin = { 0, 13 }; // receive pin that goes to debugger's UART->USB converter
+
+	//Uart config?For debugging or between arduino and LPC?-----------------------IS THIS NEEDED?
+	LpcUartConfig cfg = { LPC_USART0, 115200, UART_CFG_DATALEN_8 | UART_CFG_PARITY_NONE | UART_CFG_STOPLEN_1, false, txpin, rxpin, none, none };
+	LpcUart dbgu(cfg);
+
+	//Ringbuffer has to be initialized, e_Ring is something like a frame for the ringbuffer
+	//and e_Buffer is a real buffer, on top of which the
+	//Ringbuffer frame is put on to create the ultimate ringbuffer.
+	RingBuffer_Init(&e_Ring,e_Buffer,sizeof(enum MenuItem::menuEvent),EVENT_BUFFER_SIZE);
+
+	//Add up-event into ring buffer
+	RingBuffer_Insert(&e_Ring, (void*)MenuItem::up);
+
+	while(1){
+		Sleep(100);
+		processEvents(menu);
+	}
 
 	return 1;
 }
