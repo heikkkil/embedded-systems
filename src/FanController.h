@@ -19,6 +19,7 @@ public:
 	void run();
 	void setTargetPressure(int target);
 	void setFanSpeed(int speed);
+	int getPressure();
 private:
 	bool mode;
 	Fan fan;
