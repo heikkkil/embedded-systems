@@ -15,11 +15,13 @@ class FanController {
 public:
 	FanController(I2C_config conf, int targetPressure, int initialFanSpeed);
 	virtual ~FanController();
-	void setMode(bool);
 	void run();
 	void setTargetPressure(int target);
 	void setFanSpeed(int speed);
+	void setMode(bool);
 	int getPressure();
+	int getFanSpeed();
+	bool getMode();
 private:
 	bool mode;
 	Fan fan;
