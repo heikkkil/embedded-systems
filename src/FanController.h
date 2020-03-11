@@ -21,6 +21,7 @@ public:
 	void setMode(bool);
 	int getPressure();
 	int getFanSpeed();
+	int getAutoOutOfLimits();
 	bool getMode();
 private:
 	bool mode;
