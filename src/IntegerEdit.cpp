@@ -5,13 +5,19 @@
  *      Author: krl
  */
 
-#include "IntegerEdit.h"
 #include <cstdio>
+#include "IntegerEdit.h"
 
-IntegerEdit::IntegerEdit(LiquidCrystal *lcd_, std::string editTitle ,int limit_lower,int limit_upper):
-	lcd(lcd_),title(editTitle),lim_lower(limit_lower),lim_upper(limit_upper){
+IntegerEdit::IntegerEdit(LiquidCrystal *lcdoutput, FanController *fancon, std::string editTitle, int limit_lower,int limit_upper):
+	lcd(lcdoutput), fcon(fancon), title(editTitle), lim_lower(limit_lower),lim_upper(limit_upper){
+	errcode = "ERROR";
 	value = 0;
-	edit = 0;
+
+	if(title == "Auto  ")
+		edit = fcon->getTargetPressure();
+	else
+		edit = fcon->getFanSpeed();
+
 	focus = false;
 }
 
@@ -19,16 +25,47 @@ IntegerEdit::~IntegerEdit() {
 }
 
 void IntegerEdit::increment() {
-	if(edit < lim_upper)
-		edit++;
+	int cp = fcon->getTargetPressure();
+	int cs = fcon->getFanSpeed();
+
+	if(title == "Auto  ") {
+		if(++cp <= lim_upper) {
+			fcon->setTargetPressure(cp++);
+			edit++;
+		}
+	}
+	else{
+		if(++cs <= lim_upper) {
+			fcon->setFanSpeed(cs++);
+			edit++;
+		}
+	}
 }
 
 void IntegerEdit::decrement() {
-	if(edit > lim_lower)
-		edit--;
+	int cp = fcon->getTargetPressure();
+	int cs = fcon->getFanSpeed();
+
+	if(title == "Auto  ") {
+		if(--cp >= lim_lower) {
+			fcon->setTargetPressure(cp--);
+			edit--;
+		}
+	}
+	else{
+		if(--cs >= lim_lower) {
+			fcon->setFanSpeed(cs--);
+			edit--;
+		}
+	}
 }
 
 void IntegerEdit::accept() {
+	if(title == "Auto  ")
+		fcon->setMode(true);
+	else
+		fcon->setMode(false);
+
 	save();
 }
 
@@ -46,25 +83,54 @@ bool IntegerEdit::getFocus() {
 }
 
 void IntegerEdit::display() {
+
+	/*
+	[0123456789012345]
+	 !auto   P xxx Pa
+	 >manual S[xxx]%
+	*/
+
+	int  p = fcon->getPressure();
+	int  s = fcon->getFanSpeed();
+	bool err  = fcon->isPressureReachable();
+	char row[17];
 	lcd->clear();
+
+	/* Upper row */
 	lcd->setCursor(0,0);
-	lcd->print(title);
-	lcd->setCursor(0,1);
-	char s[17];
-	if(focus) {
-		snprintf(s, 17, "     [%4d]     ", edit);
+
+	if(title == "Auto  ") {
+		if(focus)
+			snprintf(row, 17, " %s P[%3d]Pa", title.c_str(), edit);
+		else
+			snprintf(row, 17, " %s P %3d Pa", title.c_str(), p);
 	}
 	else {
-		snprintf(s, 17, "      %4d      ", edit);
+		snprintf(row, 17, " %s P %3d Pa", title.c_str(), p);
 	}
-	lcd->print(s);
+
+	lcd->print(row);
+
+	/* Lower row */
+	lcd->setCursor(0,1);
+
+	if(title == "Manual") {
+		if(focus)
+			snprintf(row, 17, " %s S[%3d]%%", !err ? "ERROR " : "      ", edit);
+		else
+			snprintf(row, 17, " %s S %3d %%", !err ? "ERROR " : "      ", s);
+	}
+	else {
+		snprintf(row, 17, " %s S %3d %%", !err ? "ERROR " : "      ", s);
+	}
+
+	lcd->print(row);
 }
 
 
 void IntegerEdit::save() {
-	// set current value to be same as edit value
+	// Commit edit.
 	value = edit;
-	// todo: save current value for example to EEPROM for permanent storage
 }
 
 

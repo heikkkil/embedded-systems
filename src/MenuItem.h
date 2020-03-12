@@ -9,6 +9,7 @@
 #define MENUITEM_H_
 
 #include "PropertyEdit.h"
+#include "FanController.h"
 
 
 class MenuItem {
@@ -20,11 +21,12 @@ public:
 		back,
 		show
 	};
-	MenuItem(PropertyEdit *property);
+	MenuItem(PropertyEdit *property, FanController *fancon);
 	virtual ~MenuItem();
 	virtual bool event(menuEvent e);
 private:
 	PropertyEdit *pe;
+	FanController *fcon;
 };
 
 #endif /* MENUITEM_H_ */

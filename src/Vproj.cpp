@@ -262,12 +262,10 @@ int main(void)
 	lcd->setCursor(0,0);
 
 	SimpleMenu menu;
-	IntegerEdit* automatic = new IntegerEdit(lcd, std::string("Automatic"),0,100);
-	IntegerEdit* manual = new IntegerEdit(lcd, std::string("Manual"),0,150);
-	menu.addItem(new MenuItem(manual));
-	menu.addItem(new MenuItem(automatic));
-	automatic->setValue(50);
-	manual->setValue(50);
+	IntegerEdit* mode_auto = new IntegerEdit(lcd, &controller, std::string("Auto  "),0,150);
+	IntegerEdit* mode_man =  new IntegerEdit(lcd, &controller, std::string("Manual"),0,100);
+	menu.addItem(new MenuItem(mode_auto, &controller));
+	menu.addItem(new MenuItem(mode_man, &controller));
 
 	LpcPinMap none = {-1, -1}; // unused pin has negative values in it
 	LpcPinMap txpin = { 0, 18 }; // transmit pin that goes to debugger's UART->USB converter
@@ -277,14 +275,155 @@ int main(void)
 	LpcUartConfig cfg = { LPC_USART0, 115200, UART_CFG_DATALEN_8 | UART_CFG_PARITY_NONE | UART_CFG_STOPLEN_1, false, txpin, rxpin, none, none };
 	LpcUart dbgu(cfg);
 
+	menu.event(MenuItem::show);
+
+#if 0
+
+	bool Pressed(DigitalIoPin button);
 
 
-	while(1){
-		printf("Looping\n");
-		Sleep(10);
-		processEvents(menu);
+	DigitalIoPin sw1(0, 17, true, true, false), //up
+				 sw2(1, 11, true, true, false), //ok
+				 sw3(1,  9, true, true, false); //down
+
+	// Main
+	const int RET_LIMIT   = 25;
+	const int MS_INTERVAL = 20;
+
+	bool edit = false,
+		 committed = false;
+
+	int  retcounter = RET_LIMIT;
+
+	while(1)
+	{
+		//POLL BUTTONS
+		//sw1
+		if(!Pressed(sw1))
+		{
+			menu.event(MenuItem::up);
+			retcounter = RET_LIMIT;
+		}
+
+		//sw2
+		else if(!Pressed(sw2))
+		{
+			menu.event(MenuItem::ok);
+
+			if(edit){
+				committed = true;
+				edit = false;
+			}
+			else edit = true;
+
+			retcounter = RET_LIMIT;
+		}
+
+		//sw3
+		else if(!Pressed(sw3))
+		{
+			menu.event(MenuItem::down);
+			retcounter = RET_LIMIT;
+		}
+
+		// OUTPUT
+		if(committed)
+		{
+			//memset(ITM_buff, 0 ,ITM_SIZE);
+			//snprintf(ITM_buff, ITM_SIZE, "Time\t%d\nBlank\t%d\nLight\t%d\n", menu_time->getValue(), menu_blank->getValue(), menu_light->getValue());
+			//ITM_write(ITM_buff);
+			committed = false;
+		}
+
+		// CONTROL
+		if(edit && retcounter <= 0) {
+			menu.event(MenuItem::back);
+			edit = false;
+			committed = false;
+		}
+
+		retcounter -= edit ? 0 : MS_INTERVAL;
+		Sleep(MS_INTERVAL);
 	}
 
 	return 1;
 }
+
+bool Pressed(DigitalIoPin button)
+{
+	const int THRESHOLD = 8, INTERVAL = 2;
+	int press = 0, release = 0;
+
+	while(press < THRESHOLD && release < THRESHOLD)
+	{
+		if(button.read()) {
+			press++;
+			release = 0;
+		}
+		else {
+			release++;
+			press = 0;
+		}
+		Sleep(INTERVAL);
+	}
+
+	if(press > release)
+		return true;
+	else
+		return false;
+}
+
+#else
+
+#if 1
+
+// Main
+
+bool Pressed(DigitalIoPin button);
+
+	//const int RET_LIMIT   = 25;
+//	const int MS_INTERVAL = 20;
+//
+//	bool edit = false,
+//		 committed = false;
+//
+//	int  retcounter = RET_LIMIT;
+
+#endif
+
+	while(1){
+		//Sleep(100);
+		processEvents(menu);
+		controller.run();
+	}
+
+	return 1;
+}
+
+bool Pressed(DigitalIoPin button)
+{
+	const int THRESHOLD = 8, INTERVAL = 2;
+	int press = 0, release = 0;
+
+	while(press < THRESHOLD && release < THRESHOLD)
+	{
+		if(button.read()) {
+			press++;
+			release = 0;
+		}
+		else {
+			release++;
+			press = 0;
+		}
+		Sleep(INTERVAL);
+	}
+
+	if(press > release)
+		return true;
+	else
+		return false;
+}
+
+#endif
+
 

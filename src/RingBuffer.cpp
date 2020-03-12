@@ -71,4 +71,3 @@ bool RingBuffer::IsEmpty() {
 	}
 	return false;
 }
-

@@ -7,9 +7,12 @@
 
 #ifndef SIMPLEMENU_H_
 #define SIMPLEMENU_H_
+
 #include <vector>
 
 #include "MenuItem.h"
+//#include "LiquidCrystal.h"
+//#include "FanController.h"
 
 class SimpleMenu {
 public:
@@ -17,8 +20,14 @@ public:
 	virtual ~SimpleMenu();
 	void addItem(MenuItem *item);
 	void event(MenuItem::menuEvent e);
+	//void addTitle(std::string &title);
+	//void displayMenu();
+
 private:
 	std::vector<MenuItem *> items;
+	//std::vector<std::string> titles;
+	//LiquidCrystal *lcd;
+	//FanController *fcon;
 	int position;
 };
 

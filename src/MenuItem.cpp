@@ -8,7 +8,7 @@
 #include "MenuItem.h"
 
 
-MenuItem::MenuItem(PropertyEdit *property): pe(property) {
+MenuItem::MenuItem(PropertyEdit *property, FanController *fancon): pe(property), fcon(fancon) {
 
 }
 
@@ -25,7 +25,7 @@ bool MenuItem::event(menuEvent e) {
 			pe->setFocus(false);
 		}
 		else {
-			pe->setFocus(true);;
+			pe->setFocus(true);
 		}
 		break;
 	case back:
