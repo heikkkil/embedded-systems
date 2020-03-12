@@ -169,7 +169,8 @@ void PIN_INT2_IRQHandler(void){
 }
 
 void PIN_INT3_IRQHandler(void){
-	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
+
+Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
 		RingBuffer_Insert(&e_Ring, (void*)MenuItem::back);
 	}
@@ -252,7 +253,7 @@ int main(void)
 	DigitalIoPin d7(0,7,false,false,false);
 
 	//Setup pin interrupts for 4 digitalIoPins
-	setup_Pin_Interrupts();
+	//setup_Pin_Interrupts();
 
 	Chip_RIT_Init(LPC_RITIMER);
 	//NVIC_EnableIRQ(RITIMER_IRQn);
@@ -281,6 +282,15 @@ int main(void)
 	//and e_Buffer is a real buffer, on top of which the
 	//Ringbuffer frame is put on to create the ultimate ringbuffer.
 	RingBuffer_Init(&e_Ring,e_Buffer,sizeof(enum MenuItem::menuEvent),EVENT_BUFFER_SIZE);
+
+
+	RingBuffer_Insert(&e_Ring, (void*)MenuItem::back);
+	RingBuffer_Insert(&e_Ring, (void*)MenuItem::ok);
+	RingBuffer_Insert(&e_Ring, (void*)MenuItem::up);
+	RingBuffer_Insert(&e_Ring, (void*)MenuItem::down);
+
+
+
 
 	while(1){
 		printf("Looping\n");
