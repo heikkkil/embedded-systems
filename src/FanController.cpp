@@ -8,10 +8,6 @@
 #include "FanController.h"
 #include "I2C.h"
 
-#define AUTO true
-#define MANUAL false
-#define SENSOR_ADDRESS 0x40
-
 FanController::FanController(I2C_config conf, int initialTargetPressure = 80, int initialFanSpeed = 10000) : fan(2), pressureSensor(SENSOR_ADDRESS, conf) {
 	fanSpeed = initialFanSpeed;
 	targetPressure = initialTargetPressure;
@@ -53,21 +49,21 @@ void FanController::automatic() {
 	if (autoOutOfLimits >= 2) {
 		if (comp <= 10 && comp >= -10) {
 			if (comp < 0) {
-				fanSpeed -= 100;
+				fanSpeed -= SMALL_FAN_ADJUST;
 			} else {
-				fanSpeed += 100;
+				fanSpeed += SMALL_FAN_ADJUST;
 			}
 		} else if (comp >= 25 || comp <= -25) {
 			if (comp >= 25) {
-				fanSpeed += 1000;
+				fanSpeed += BIG_FAN_ADJUST;
 			} else {
-				fanSpeed -= 1000;
+				fanSpeed -= BIG_FAN_ADJUST;
 			}
 		} else {
 			if (comp < 0) {
-				fanSpeed -= 300;
+				fanSpeed -= MEDIUM_FAN_ADJUST;
 			} else {
-				fanSpeed += 300;
+				fanSpeed += MEDIUM_FAN_ADJUST;
 			}
 		}
 	}
@@ -94,12 +90,15 @@ void FanController::setTargetPressure(int target) {
 
 void FanController::setFanSpeed(int speed) {
 	if (mode == MANUAL) {
-		fanSpeed = speed;
+		fanSpeed = 200*speed;
 	}
 }
 
 void FanController::setMode(bool m) {
 	mode = m;
+	if (mode == AUTO) {
+		autoOutOfLimits = 0;
+	}
 }
 
 int FanController::getPressure() {
@@ -112,4 +111,8 @@ int FanController::getFanSpeed() {
 
 bool FanController::getMode() {
 	return mode;
+}
+
+bool FanController::getPressureReachable() {
+	return (autoOutOfLimits < NOT_REACHED_LIMIT);
 }
