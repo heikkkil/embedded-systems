@@ -36,6 +36,7 @@
 #include "ModbusMaster.h"
 #include "ModbusRegister.h"
 #include "LpcUart.h"
+#include "RingBuffer.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -45,14 +46,16 @@ static volatile uint32_t systicks;
 static volatile uint32_t prev_systicks;
 
 //Array of type
-static enum MenuItem::menuEvent e_Buffer[EVENT_BUFFER_SIZE];
+//static enum MenuItem::menuEvent e_Buffer[EVENT_BUFFER_SIZE];
 
 /*****************************************************************************
  * Public types/enumerations/variables
  ****************************************************************************/
+RingBuffer e_Ring(10);
+
 
 //Ringbuffer frame
-RINGBUFF_T e_Ring;
+//RINGBUFF_T e_Ring;
 
 
 /*****************************************************************************
@@ -147,7 +150,7 @@ void SysTick_Handler(void)
 void PIN_INT0_IRQHandler(void){
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(0));
 	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
-		RingBuffer_Insert(&e_Ring, (void*)MenuItem::up);
+		e_Ring.add(MenuItem::up);
 	}
 	prev_systicks = systicks;
 }
@@ -155,7 +158,7 @@ void PIN_INT0_IRQHandler(void){
 void PIN_INT1_IRQHandler(void){
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(1));
 	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
-		RingBuffer_Insert(&e_Ring, (void*)MenuItem::ok);
+		e_Ring.add(MenuItem::ok);
 	}
 	prev_systicks = systicks;
 }
@@ -163,7 +166,7 @@ void PIN_INT1_IRQHandler(void){
 void PIN_INT2_IRQHandler(void){
 	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(2));
 	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
-		RingBuffer_Insert(&e_Ring, (void*)MenuItem::down);
+		e_Ring.add(MenuItem::down);
 	}
 	prev_systicks = systicks;
 }
@@ -172,7 +175,7 @@ void PIN_INT3_IRQHandler(void){
 
 Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
-		RingBuffer_Insert(&e_Ring, (void*)MenuItem::back);
+		e_Ring.add(MenuItem::back);
 	}
 	prev_systicks = systicks;
 }
@@ -189,9 +192,9 @@ Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
  */
 void processEvents(SimpleMenu& menu){
 
-	while(!RingBuffer_IsEmpty(&e_Ring)){
+	while(!e_Ring.IsEmpty()){
 		enum MenuItem::menuEvent event;
-		RingBuffer_Pop(&e_Ring, &event);
+		event = e_Ring.Pop();
 
 		menu.event(event);
 	}
@@ -242,8 +245,6 @@ int main(void)
 	//Setup pin interrupts for 4 digitalIoPins
 	setup_Pin_Interrupts();
 
-
-
 	//Initialize Pins for LCD screen
 	DigitalIoPin rs(0,8,false,false,false);
 	DigitalIoPin en(1,6,false,false,false);
@@ -252,8 +253,6 @@ int main(void)
 	DigitalIoPin d6(0,6,false,false,false);
 	DigitalIoPin d7(0,7,false,false,false);
 
-	//Setup pin interrupts for 4 digitalIoPins
-	//setup_Pin_Interrupts();
 
 	Chip_RIT_Init(LPC_RITIMER);
 	//NVIC_EnableIRQ(RITIMER_IRQn);
@@ -277,18 +276,6 @@ int main(void)
 	//Uart config?For debugging or between arduino and LPC?-----------------------IS THIS NEEDED?
 	LpcUartConfig cfg = { LPC_USART0, 115200, UART_CFG_DATALEN_8 | UART_CFG_PARITY_NONE | UART_CFG_STOPLEN_1, false, txpin, rxpin, none, none };
 	LpcUart dbgu(cfg);
-
-	//Ringbuffer has to be initialized, e_Ring is something like a frame for the ringbuffer
-	//and e_Buffer is a real buffer, on top of which the
-	//Ringbuffer frame is put on to create the ultimate ringbuffer.
-	RingBuffer_Init(&e_Ring,e_Buffer,sizeof(enum MenuItem::menuEvent),EVENT_BUFFER_SIZE);
-
-
-	RingBuffer_Insert(&e_Ring, (void*)MenuItem::back);
-	RingBuffer_Insert(&e_Ring, (void*)MenuItem::ok);
-	RingBuffer_Insert(&e_Ring, (void*)MenuItem::up);
-	RingBuffer_Insert(&e_Ring, (void*)MenuItem::down);
-
 
 
 
