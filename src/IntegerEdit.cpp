@@ -11,13 +11,13 @@
 IntegerEdit::IntegerEdit(LiquidCrystal *lcdoutput, FanController *fancon, std::string editTitle, int limit_lower,int limit_upper):
 	lcd(lcdoutput), fcon(fancon), title(editTitle), lim_lower(limit_lower),lim_upper(limit_upper){
 	errcode = "ERROR";
-	value = 0;
 
 	if(title == "Auto  ")
-		edit = fcon->getTargetPressure();
+		value = fcon->getTargetPressure();
 	else
-		edit = fcon->getFanSpeed();
+		value = fcon->getFanSpeed();
 
+	edit = value;
 	focus = false;
 }
 
@@ -25,46 +25,25 @@ IntegerEdit::~IntegerEdit() {
 }
 
 void IntegerEdit::increment() {
-	int cp = fcon->getTargetPressure();
-	int cs = fcon->getFanSpeed();
-
-	if(title == "Auto  ") {
-		if(++cp <= lim_upper) {
-			fcon->setTargetPressure(cp++);
-			edit++;
-		}
-	}
-	else{
-		if(++cs <= lim_upper) {
-			fcon->setFanSpeed(cs++);
-			edit++;
-		}
+	if (edit < lim_upper) {
+		++edit;
 	}
 }
 
 void IntegerEdit::decrement() {
-	int cp = fcon->getTargetPressure();
-	int cs = fcon->getFanSpeed();
-
-	if(title == "Auto  ") {
-		if(--cp >= lim_lower) {
-			fcon->setTargetPressure(cp--);
-			edit--;
-		}
-	}
-	else{
-		if(--cs >= lim_lower) {
-			fcon->setFanSpeed(cs--);
-			edit--;
-		}
+	if (edit > lim_lower) {
+		--edit;
 	}
 }
 
 void IntegerEdit::accept() {
-	if(title == "Auto  ")
+	if(title == "Auto  ") {
 		fcon->setMode(true);
-	else
+		fcon->setTargetPressure(edit);
+	} else {
 		fcon->setMode(false);
+		fcon->setFanSpeed(edit);
+	}
 
 	save();
 }

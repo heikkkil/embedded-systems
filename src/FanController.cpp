@@ -32,6 +32,8 @@ void FanController::run() {
 	} else {
 		manual();
 	}
+	printf("fanspeed %d pressure %d target %d", fanSpeed, pressure, targetPressure);
+	printf("\n");
 }
 
 void FanController::automatic() {
@@ -71,12 +73,11 @@ void FanController::automatic() {
 		fanSpeed = 0;
 	}
 
-	printf("fan speed: %d pressure: %d target: %d", fanSpeed, pressure, targetPressure);
 	fan.setNonRelativeFrequency(fanSpeed);
 }
 
 void FanController::manual() {
-	fan.setFrequency(fanSpeed);
+	fan.setNonRelativeFrequency(fanSpeed);
 }
 
 void FanController::setTargetPressure(int target) {
