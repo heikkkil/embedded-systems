@@ -72,6 +72,7 @@ void IntegerEdit::display() {
 	int  p = fcon->getPressure();
 	int  s = fcon->getFanSpeed();
 	bool err  = fcon->isPressureReachable();
+	bool mode = fcon->getMode();
 	char row[17];
 	lcd->clear();
 
@@ -93,14 +94,28 @@ void IntegerEdit::display() {
 	/* Lower row */
 	lcd->setCursor(0,1);
 
+	std::string modeErrorString = "";
+
+	if (mode == true) {
+		modeErrorString += "A ";
+	} else {
+		modeErrorString += "M ";
+	}
+
+	if (!err) {
+		modeErrorString += "ERR ";
+	} else {
+		modeErrorString += "    ";
+	}
+
 	if(title == "Manual") {
 		if(focus)
-			snprintf(row, 17, " %s S[%3d]%%", !err ? "ERROR " : "      ", edit);
+			snprintf(row, 17, " %s S[%3d]%%", modeErrorString.c_str(), edit);
 		else
-			snprintf(row, 17, " %s S %3d %%", !err ? "ERROR " : "      ", s);
+			snprintf(row, 17, " %s S %3d %%", modeErrorString.c_str(), s);
 	}
 	else {
-		snprintf(row, 17, " %s S %3d %%", !err ? "ERROR " : "      ", s);
+		snprintf(row, 17, " %s S %3d %%", modeErrorString.c_str(), s);
 	}
 
 	lcd->print(row);

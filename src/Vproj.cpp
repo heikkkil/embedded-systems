@@ -44,6 +44,7 @@
 static volatile std::atomic_int counter;
 static volatile uint32_t systicks;
 static volatile uint32_t prev_systicks;
+static volatile uint32_t refresh_screen_ticks;
 
 //Array of type
 //static enum MenuItem::menuEvent e_Buffer[EVENT_BUFFER_SIZE];
@@ -391,10 +392,11 @@ bool Pressed(DigitalIoPin button);
 
 #endif
 
+
 	while(1){
-		//Sleep(100);
 		processEvents(menu);
 		controller.run();
+		e_Ring.add(MenuItem::show);
 	}
 
 	return 1;

@@ -94,9 +94,7 @@ void FanController::setFanSpeed(int speed) {
 
 void FanController::setMode(bool m) {
 	mode = m;
-	if (mode == AUTO) {
-		autoOutOfLimits = 0;
-	}
+	autoOutOfLimits = 0;
 }
 
 int FanController::getPressure() {
