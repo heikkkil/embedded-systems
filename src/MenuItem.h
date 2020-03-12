@@ -18,7 +18,8 @@ public:
 		down,
 		ok,
 		back,
-		show
+		show,
+		refresh
 	};
 	MenuItem(PropertyEdit *property);
 	virtual ~MenuItem();

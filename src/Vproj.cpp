@@ -44,19 +44,16 @@
 static volatile std::atomic_int counter;
 static volatile uint32_t systicks;
 static volatile uint32_t prev_systicks;
+static volatile uint32_t cancel_timer;
+static volatile uint32_t display_refresh_timer;
 
-//Array of type
-//static enum MenuItem::menuEvent e_Buffer[EVENT_BUFFER_SIZE];
 
 /*****************************************************************************
  * Public types/enumerations/variables
  ****************************************************************************/
+
 RingBuffer e_Ring(10);
-
-
-//Ringbuffer frame
-//RINGBUFF_T e_Ring;
-
+RingBuffer t_Ring(10);
 
 /*****************************************************************************
  * Private functions
@@ -65,27 +62,10 @@ static void setup_Pin_Interrupts(){
 
 	Chip_PININT_Init(LPC_GPIO_PIN_INT);
 
-	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 0,
-							 (IOCON_DIGMODE_EN |(0x2<<3) |IOCON_MODE_INACT) );
-	Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 3,
-							 (IOCON_DIGMODE_EN |(0x2<<3) |IOCON_MODE_INACT) );
-	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 9,
-							 (IOCON_DIGMODE_EN |(0x2<<3)| IOCON_MODE_INACT) );
-	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10,
-							 (IOCON_DIGMODE_EN |(0x2<<3)| IOCON_MODE_INACT) );
-
-	/* Configure GPIO pin as input */
-	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 0);
-
-	/* Configure GPIO pin as input */
-	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 1, 3);
-
-	/* Configure GPIO pin as input */
-	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 9);
-
-	/* Configure GPIO pin as input */
-	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 10);
-
+	DigitalIoPin SW1(0,0,true,true,true);
+	DigitalIoPin SW2(1,3,true,true,true);
+	DigitalIoPin SW3(0,10,true,true,true);
+	DigitalIoPin SW4(0,9,true,true,true);
 
 	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_PININT);
 
@@ -99,24 +79,9 @@ static void setup_Pin_Interrupts(){
 	Chip_INMUX_PinIntSel(3, 0, 9);
 
 	//Clear interrupt status of pins
-	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0));
-	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(0));
-	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(0));
-
-	//Clear interrupt status of pins
-	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(1));
-	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(1));
-	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(1));
-
-	//Clear interrupt status of pins
-	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(2));
-	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(2));
-	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(2));
-
-	//Clear interrupt status of pins
-	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(3));
-	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(3));
-	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(3));
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0)|PININTCH(1)| PININTCH(2)| PININTCH(3));
+	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(0)|PININTCH(1)| PININTCH(2)| PININTCH(3));
+	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(0)|PININTCH(1)| PININTCH(2)| PININTCH(3));
 
 	//Enable IRQ's for pins
 	NVIC_ClearPendingIRQ(PIN_INT0_IRQn);
@@ -137,13 +102,26 @@ static void setup_Pin_Interrupts(){
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
 /**
- * @brief	Handle interrupt from SysTick timer
+ * @brief	Handle interrupt from SysTick timer by setting timer value to systicks+[offset]
  * @return	Nothing
  */
 void SysTick_Handler(void)
 {
 	systicks++;
+
+	//Periodically resets focus on menu items.
+	if(cancel_timer <= systicks){
+		e_Ring.add(MenuItem::back);
+	}
+
+	//Periodically refreshes lcd screen.
+	if(display_refresh_timer <= systicks){
+		t_Ring.add(MenuItem::refresh);
+	}
+
 	if(counter > 0) counter--;
 }
 
@@ -186,15 +164,24 @@ Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 #endif
 
 
-/**
- * @brief 	Pop events from buffer and call handling functions until buffer is empty.
- * @note	ptr_Event is an empty pointer where data will be saved, no need to worry about warning
+
+
+
+/*
+ * @brief Processes both ringbuffers and handles their events
+ * @param menu : Object that links events and handling.
  */
 void processEvents(SimpleMenu& menu){
 
 	while(!e_Ring.IsEmpty()){
 		enum MenuItem::menuEvent event;
 		event = e_Ring.Pop();
+
+		menu.event(event);
+	}
+	while(!t_Ring.IsEmpty()){
+		enum MenuItem::menuEvent event;
+		event = t_Ring.Pop();
 
 		menu.event(event);
 	}
@@ -276,7 +263,6 @@ int main(void)
 	//Uart config?For debugging or between arduino and LPC?-----------------------IS THIS NEEDED?
 	LpcUartConfig cfg = { LPC_USART0, 115200, UART_CFG_DATALEN_8 | UART_CFG_PARITY_NONE | UART_CFG_STOPLEN_1, false, txpin, rxpin, none, none };
 	LpcUart dbgu(cfg);
-
 
 
 	while(1){
