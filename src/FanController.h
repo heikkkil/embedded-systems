@@ -11,6 +11,14 @@
 #include "PressureSensor.h"
 #include "Fan.h"
 
+#define AUTO true
+#define MANUAL false
+#define SENSOR_ADDRESS 0x40
+#define NOT_REACHED_LIMIT 50
+#define SMALL_FAN_ADJUST 100
+#define MEDIUM_FAN_ADJUST 300
+#define BIG_FAN_ADJUST 1000
+
 class FanController {
 public:
 	FanController(I2C_config conf, int targetPressure, int initialFanSpeed);
@@ -21,7 +29,7 @@ public:
 	void setMode(bool);
 	int getPressure();
 	int getFanSpeed();
-	int getAutoOutOfLimits();
+	bool getPressureReachable();
 	bool getMode();
 private:
 	bool mode;
