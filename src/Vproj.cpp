@@ -22,6 +22,7 @@
 // TODO: insert other definitions and declarations here
 #define EVENT_BUFFER_SIZE 10
 #define BOUNCER_LIMIT 100
+#define BACK_TIME_LIMIT 5000
 #define OK_PRESSED 1
 #define OK_NOT_PRESSED 0
 
@@ -149,7 +150,7 @@ void SysTick_Handler(void)
 	systicks++;
 	if(counter > 0) counter--;
 	if(ok_pressed == OK_PRESSED) {
-		if (systicks - prev_systicks >= 5000) {
+		if (systicks - prev_systicks >= BACK_TIME_LIMIT	) {
 			e_Ring.add(MenuItem::back);
 			ok_pressed = OK_NOT_PRESSED;
 		}
