@@ -22,6 +22,8 @@
 // TODO: insert other definitions and declarations here
 #define EVENT_BUFFER_SIZE 10
 #define BOUNCER_LIMIT 100
+#define OK_PRESSED 1
+#define OK_NOT_PRESSED 0
 
 #include <ring_buffer.h>
 #include <memory>
@@ -44,7 +46,7 @@
 static volatile std::atomic_int counter;
 static volatile uint32_t systicks;
 static volatile uint32_t prev_systicks;
-static volatile uint32_t refresh_screen_ticks;
+static volatile uint8_t ok_pressed;
 
 //Array of type
 //static enum MenuItem::menuEvent e_Buffer[EVENT_BUFFER_SIZE];
@@ -146,6 +148,12 @@ void SysTick_Handler(void)
 {
 	systicks++;
 	if(counter > 0) counter--;
+	if(ok_pressed == OK_PRESSED) {
+		if (systicks - prev_systicks >= 5000) {
+			e_Ring.add(MenuItem::back);
+			ok_pressed = OK_NOT_PRESSED;
+		}
+	}
 }
 
 void PIN_INT0_IRQHandler(void){
@@ -162,6 +170,7 @@ void PIN_INT1_IRQHandler(void){
 		e_Ring.add(MenuItem::ok);
 	}
 	prev_systicks = systicks;
+	ok_pressed = OK_PRESSED;
 }
 
 void PIN_INT2_IRQHandler(void){
@@ -179,6 +188,7 @@ Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 		e_Ring.add(MenuItem::back);
 	}
 	prev_systicks = systicks;
+	ok_pressed = OK_NOT_PRESSED;
 }
 
 
