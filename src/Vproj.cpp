@@ -23,6 +23,7 @@
 #define EVENT_BUFFER_SIZE 10
 #define BOUNCER_LIMIT 100
 #define BACK_TIME_LIMIT 5000
+#define REFRESH_PERIOD 500
 #define OK_PRESSED 1
 #define OK_NOT_PRESSED 0
 
@@ -47,6 +48,7 @@
 static volatile std::atomic_int counter;
 static volatile uint32_t systicks;
 static volatile uint32_t prev_systicks;
+static volatile uint32_t refresh_counter;
 static volatile uint8_t ok_pressed;
 
 //Array of type
@@ -155,6 +157,11 @@ void SysTick_Handler(void)
 			ok_pressed = OK_NOT_PRESSED;
 		}
 	}
+
+	if(refresh_counter <= systicks ){
+		e_Ring.add(MenuItem::show);
+		refresh_counter = systicks + REFRESH_PERIOD;
+	}
 }
 
 void PIN_INT0_IRQHandler(void){
@@ -199,8 +206,7 @@ Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 
 
 /**
- * @brief 	Pop events from buffer and call handling functions until buffer is empty.
- * @note	ptr_Event is an empty pointer where data will be saved, no need to worry about warning
+ * @brief 	Processes events in the eventbuffer.
  */
 void processEvents(SimpleMenu& menu){
 
@@ -293,7 +299,7 @@ int main(void)
 	while(1){
 		processEvents(menu);
 		controller.run();
-		e_Ring.add(MenuItem::show);
+		//e_Ring.add(MenuItem::show);
 	}
 
 	return 1;
