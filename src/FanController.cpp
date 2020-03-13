@@ -21,7 +21,8 @@ FanController::~FanController() {
 
 void FanController::run() {
 	pressure = pressureSensor.getPressure();
-
+	//For some reason (int overlow?), when pressure is close to 0, it sometimes spikes to ~250
+	//normally pressure never gets over 200 so make all of those to 0
 	if (mode == AUTO) {
 		automatic();
 	} else {
