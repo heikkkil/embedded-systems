@@ -7,8 +7,13 @@
 
 #include "MenuItem.h"
 
+<<<<<<< HEAD
 #define CANCEL_TIMER 5000
 MenuItem::MenuItem(PropertyEdit *property): pe(property) {
+=======
+
+MenuItem::MenuItem(PropertyEdit *property, FanController *fancon): pe(property), fcon(fancon) {
+>>>>>>> prefinal
 
 }
 

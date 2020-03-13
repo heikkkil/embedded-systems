@@ -19,7 +19,7 @@ public:
 private:
 	uint8_t address;
 	I2C i2c;
-	uint16_t getRawMeasurement();
+	int16_t getRawMeasurement();
 	int measurementHistory[3];
 	int index;
 	int medianFilter();

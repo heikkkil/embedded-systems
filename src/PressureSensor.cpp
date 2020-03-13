@@ -33,11 +33,11 @@ int PressureSensor::getPressure() {
 	return medianFilter();
 }
 
-uint16_t PressureSensor::getRawMeasurement() {
+int16_t PressureSensor::getRawMeasurement() {
 	uint8_t read = 0xF1;
 	uint8_t buffer[3];
 	i2c.transaction(address, &read, 1, buffer, 3);
-	uint16_t measurement_bits = ((int16_t)buffer[0] << 8) | buffer[1];
+	int16_t measurement_bits = ((int16_t)buffer[0] << 8) | buffer[1];
 	return measurement_bits;
 }
 

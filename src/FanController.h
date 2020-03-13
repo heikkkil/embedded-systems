@@ -27,9 +27,10 @@ public:
 	void setTargetPressure(int target);
 	void setFanSpeed(int speed);
 	void setMode(bool);
-	int getPressure();
-	int getFanSpeed();
-	bool getPressureReachable();
+	int  getPressure();
+	int  getFanSpeed();
+	int  getTargetPressure();
+	bool isPressureReachable();
 	bool getMode();
 private:
 	bool mode;

@@ -22,6 +22,10 @@
 // TODO: insert other definitions and declarations here
 #define EVENT_BUFFER_SIZE 10
 #define BOUNCER_LIMIT 100
+#define BACK_TIME_LIMIT 5000
+#define REFRESH_PERIOD 500
+#define OK_PRESSED 1
+#define OK_NOT_PRESSED 0
 
 #include <ring_buffer.h>
 #include <memory>
@@ -44,8 +48,13 @@
 static volatile std::atomic_int counter;
 static volatile uint32_t systicks;
 static volatile uint32_t prev_systicks;
+<<<<<<< HEAD
 static volatile uint32_t cancel_timer;
 static volatile uint32_t display_refresh_timer;
+=======
+static volatile uint32_t refresh_counter;
+static volatile uint8_t ok_pressed;
+>>>>>>> prefinal
 
 
 /*****************************************************************************
@@ -123,6 +132,17 @@ void SysTick_Handler(void)
 	}
 
 	if(counter > 0) counter--;
+	if(ok_pressed == OK_PRESSED) {
+		if (systicks - prev_systicks >= BACK_TIME_LIMIT	) {
+			e_Ring.add(MenuItem::back);
+			ok_pressed = OK_NOT_PRESSED;
+		}
+	}
+
+	if(refresh_counter <= systicks ){
+		e_Ring.add(MenuItem::show);
+		refresh_counter = systicks + REFRESH_PERIOD;
+	}
 }
 
 void PIN_INT0_IRQHandler(void){
@@ -139,6 +159,7 @@ void PIN_INT1_IRQHandler(void){
 		e_Ring.add(MenuItem::ok);
 	}
 	prev_systicks = systicks;
+	ok_pressed = OK_PRESSED;
 }
 
 void PIN_INT2_IRQHandler(void){
@@ -156,6 +177,7 @@ Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 		e_Ring.add(MenuItem::back);
 	}
 	prev_systicks = systicks;
+	ok_pressed = OK_NOT_PRESSED;
 }
 
 
@@ -164,12 +186,17 @@ Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 #endif
 
 
+<<<<<<< HEAD
 
 
 
 /*
  * @brief Processes both ringbuffers and handles their events
  * @param menu : Object that links events and handling.
+=======
+/**
+ * @brief 	Processes events in the eventbuffer.
+>>>>>>> prefinal
  */
 void processEvents(SimpleMenu& menu){
 
@@ -249,12 +276,10 @@ int main(void)
 	lcd->setCursor(0,0);
 
 	SimpleMenu menu;
-	IntegerEdit* automatic = new IntegerEdit(lcd, std::string("Automatic"),0,100);
-	IntegerEdit* manual = new IntegerEdit(lcd, std::string("Manual"),0,150);
-	menu.addItem(new MenuItem(manual));
-	menu.addItem(new MenuItem(automatic));
-	automatic->setValue(50);
-	manual->setValue(50);
+	IntegerEdit* mode_auto = new IntegerEdit(lcd, &controller, std::string("Auto  "),0,130);
+	IntegerEdit* mode_man =  new IntegerEdit(lcd, &controller, std::string("Manual"),0,100);
+	menu.addItem(new MenuItem(mode_auto, &controller));
+	menu.addItem(new MenuItem(mode_man, &controller));
 
 	LpcPinMap none = {-1, -1}; // unused pin has negative values in it
 	LpcPinMap txpin = { 0, 18 }; // transmit pin that goes to debugger's UART->USB converter
@@ -264,13 +289,18 @@ int main(void)
 	LpcUartConfig cfg = { LPC_USART0, 115200, UART_CFG_DATALEN_8 | UART_CFG_PARITY_NONE | UART_CFG_STOPLEN_1, false, txpin, rxpin, none, none };
 	LpcUart dbgu(cfg);
 
+<<<<<<< HEAD
+=======
+	controller.run();
+	menu.event(MenuItem::show);
+>>>>>>> prefinal
 
 	while(1){
-		printf("Looping\n");
-		Sleep(10);
 		processEvents(menu);
+		controller.run();
 	}
 
 	return 1;
 }
+
 
