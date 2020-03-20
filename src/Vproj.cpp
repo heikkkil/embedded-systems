@@ -1,7 +1,7 @@
 /*
 ===============================================================================
  Name        : main.c
- Author      : $(author)
+ Author      : $(Jere, Heikki, Eelis)
  Version     :
  Copyright   : $(copyright)
  Description : main definition
@@ -22,8 +22,10 @@
 // TODO: insert other definitions and declarations here
 #define EVENT_BUFFER_SIZE 10
 #define BOUNCER_LIMIT 100
+#define BACK_TIME_LIMIT 5000
 #define REFRESH_PERIOD 500
-#define CANCEL_PERIOD 2000
+#define OK_PRESSED 1
+#define OK_NOT_PRESSED 0
 
 #include <ring_buffer.h>
 #include <memory>
@@ -46,34 +48,28 @@
 static volatile std::atomic_int counter;
 static volatile uint32_t systicks;
 static volatile uint32_t prev_systicks;
-static volatile uint32_t cancel_timer;
-static volatile uint32_t display_refresh_timer;
+static volatile uint32_t refresh_counter;
+static volatile uint8_t ok_pressed;
 
 /*****************************************************************************
  * Public types/enumerations/variables
  ****************************************************************************/
-//One buffer for events that are associated more with menu, and one for Systick timer associated events
-RingBuffer e_Ring(10);
-RingBuffer t_Ring(10);
+ RingBuffer e_Ring(10);
 
 /*****************************************************************************
  * Private functions
  ****************************************************************************/
 
-/**
- * @brief 	All configuration needed for button interrupts is here
- * @return 	Nothign
- */
+ //Setup pin block and switches to send interrupts properly
 static void setup_Pin_Interrupts(){
 
 	Chip_PININT_Init(LPC_GPIO_PIN_INT);
 
 	DigitalIoPin SW1(0,0,true,true,true);
 	DigitalIoPin SW2(1,3,true,true,true);
-	DigitalIoPin SW3(0,10,true,true,true);
-	DigitalIoPin SW4(0,9,true,true,true);
+	DigitalIoPin SW3(0,9,true,true,true);
+	DigitalIoPin SW4(0,10,true,true,true);
 
-	//Enable peripheral clock
 	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_PININT);
 
 	/* Reset the PININT block */
@@ -86,10 +82,10 @@ static void setup_Pin_Interrupts(){
 	Chip_INMUX_PinIntSel(3, 0, 9);
 
 	//Clear interrupt status of pins
-	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0)|PININTCH(1)| PININTCH(2)| PININTCH(3));
-	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(0)|PININTCH(1)| PININTCH(2)| PININTCH(3));
-	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(0)|PININTCH(1)| PININTCH(2)| PININTCH(3));
-
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0)| PININTCH(1) | PININTCH(2) | PININTCH(3));
+	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(0)| PININTCH(1) | PININTCH(2) | PININTCH(3));
+	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(0)| PININTCH(1) | PININTCH(2) | PININTCH(3));
+	
 	//Enable IRQ's for pins
 	NVIC_ClearPendingIRQ(PIN_INT0_IRQn);
 	NVIC_EnableIRQ(PIN_INT0_IRQn);
@@ -110,27 +106,21 @@ static void setup_Pin_Interrupts(){
 extern "C" {
 #endif
 
-
-//Throw timer events by SysTick timer by setting timer value to systicks+[offset] and counting "down"
 void SysTick_Handler(void)
 {
 	systicks++;
-	cancel_timer++;
-	display_refresh_timer++;
-
-	//Periodically resets focus on menu items.
-	if(cancel_timer <= systicks){
-		e_Ring.add(MenuItem::back);
-		cancel_timer = systicks + CANCEL_PERIOD;
-	}
-
-	//Periodically refreshes lcd screen.
-	if(display_refresh_timer <= systicks){
-		t_Ring.add(MenuItem::refresh);
-		display_refresh_timer = REFRESH_PERIOD;
-	}
-
 	if(counter > 0) counter--;
+	if(ok_pressed == OK_PRESSED) {
+		if (systicks - prev_systicks >= BACK_TIME_LIMIT	) {
+			e_Ring.add(MenuItem::back);
+			ok_pressed = OK_NOT_PRESSED;
+		}
+	}
+
+	if(refresh_counter <= systicks ){
+		e_Ring.add(MenuItem::show);
+		refresh_counter = systicks + REFRESH_PERIOD;
+	}
 }
 
 void PIN_INT0_IRQHandler(void){
@@ -147,6 +137,7 @@ void PIN_INT1_IRQHandler(void){
 		e_Ring.add(MenuItem::ok);
 	}
 	prev_systicks = systicks;
+	ok_pressed = OK_PRESSED;
 }
 
 void PIN_INT2_IRQHandler(void){
@@ -158,12 +149,12 @@ void PIN_INT2_IRQHandler(void){
 }
 
 void PIN_INT3_IRQHandler(void){
-
 Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
 		e_Ring.add(MenuItem::back);
 	}
 	prev_systicks = systicks;
+	ok_pressed = OK_NOT_PRESSED;
 }
 
 
@@ -172,13 +163,9 @@ Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 #endif
 
 
-
-
-
-/*
- * @brief 	Processes both ringbuffers and handles their events
- * @param 	menu : Object that links events and handling.
- * @return	Nothing
+/**
+ * @brief 	Processes events in the eventbuffer.
+ * @param	menu : Menuobject that processes the events.
  */
 void processEvents(SimpleMenu& menu){
 
@@ -188,15 +175,11 @@ void processEvents(SimpleMenu& menu){
 
 		menu.event(event);
 	}
-
-	while(!t_Ring.IsEmpty()){
-		enum MenuItem::menuEvent event;
-		event = t_Ring.Pop();
-
-		menu.event(event);
-	}
 }
-
+/**
+*@brief Program waits for a specified time amount
+*@param ms : How many millisecons to sleep for
+*/
 void Sleep(int ms)
 {
 	counter = ms;
@@ -259,28 +242,28 @@ int main(void)
 	lcd->setCursor(0,0);
 
 	SimpleMenu menu;
-	IntegerEdit* automatic = new IntegerEdit(lcd, std::string("Automatic"),0,100);
-	IntegerEdit* manual = new IntegerEdit(lcd, std::string("Manual"),0,150);
-	menu.addItem(new MenuItem(manual));
-	menu.addItem(new MenuItem(automatic));
-	automatic->setValue(50);
-	manual->setValue(50);
+	IntegerEdit* mode_auto = new IntegerEdit(lcd, &controller, std::string("Auto  "),0,130);
+	IntegerEdit* mode_man =  new IntegerEdit(lcd, &controller, std::string("Manual"),0,100);
+	menu.addItem(new MenuItem(mode_auto, &controller));
+	menu.addItem(new MenuItem(mode_man, &controller));
 
 	LpcPinMap none = {-1, -1}; // unused pin has negative values in it
 	LpcPinMap txpin = { 0, 18 }; // transmit pin that goes to debugger's UART->USB converter
 	LpcPinMap rxpin = { 0, 13 }; // receive pin that goes to debugger's UART->USB converter
 
-	//Uart config?For debugging or between arduino and LPC?-----------------------IS THIS NEEDED?
+	
 	LpcUartConfig cfg = { LPC_USART0, 115200, UART_CFG_DATALEN_8 | UART_CFG_PARITY_NONE | UART_CFG_STOPLEN_1, false, txpin, rxpin, none, none };
 	LpcUart dbgu(cfg);
 
+	controller.run();
+	menu.event(MenuItem::show);
 
 	while(1){
-		printf("Looping\n");
-		Sleep(10);
 		processEvents(menu);
+		controller.run();
 	}
 
 	return 1;
 }
+
 

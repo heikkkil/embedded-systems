@@ -27,6 +27,8 @@
 // this code.
 //*****************************************************************************
 
+#if 0 /*whole file*/
+
 #include <stdint.h>
 
 // ******************************************************************
@@ -184,3 +186,5 @@ int _read(int iFileHandle, char *pcBuffer, int iLength) {
 }
 
 #endif // NEWLIB _read()
+
+#endif   /*whole file*/

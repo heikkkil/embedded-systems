@@ -7,25 +7,26 @@
 
 #include "MenuItem.h"
 
-MenuItem::MenuItem(PropertyEdit *property): pe(property) {
+/**
+*@param property		: Pointer to a baseclass of an editable value.
+*@param fancon			: pointer to a fancontroller object.
+*/
+MenuItem::MenuItem(PropertyEdit *property, FanController *fancon): pe(property), fcon(fancon) {
 
 }
-
-
 
 MenuItem::~MenuItem() {
 
 }
+
 /**
- * @brief Statehandler of the program. Mostly handles menu events but added some timer events.
- */
+*@brief 	Handles events.
+*@param e	: Event type.
+*@return	Returns true if item has handled the event. 
+*/
 bool MenuItem::event(menuEvent e) {
 	bool handled = true;
 	switch(e) {
-
-/*******************************************
- * MENU EVENTS
- *******************************************/
 	case ok:
 		if(pe->getFocus()) {
 			pe->accept();
@@ -43,6 +44,7 @@ bool MenuItem::event(menuEvent e) {
 		else {
 			handled = false;
 		}
+
 		break;
 	case show:
 		break;
@@ -54,14 +56,6 @@ bool MenuItem::event(menuEvent e) {
 		if(pe->getFocus()) pe->decrement();
 		else handled = false;
 		break;
-
-/*******************************************
- * TIMER EVENTS
- *******************************************/
-	case refresh:
-
-		break;
-
 	}
 	if(handled) pe->display();
 
