@@ -20,7 +20,6 @@ public:
 		ok,
 		back,
 		show,
-		refresh
 	};
 	MenuItem(PropertyEdit *property, FanController *fancon);
 	virtual ~MenuItem();
