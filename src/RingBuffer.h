@@ -1,3 +1,4 @@
+
 /*
  * RingBuffer.h
  *
@@ -13,7 +14,6 @@
 #include "MenuItem.h"
 class RingBuffer {
 public:
-	int8_t operator[](int);
 	RingBuffer(int length);
 	virtual ~RingBuffer();
 	void add(enum MenuItem::menuEvent);

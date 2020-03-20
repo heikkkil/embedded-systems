@@ -20,14 +20,9 @@ public:
 	virtual ~SimpleMenu();
 	void addItem(MenuItem *item);
 	void event(MenuItem::menuEvent e);
-	//void addTitle(std::string &title);
-	//void displayMenu();
 
 private:
 	std::vector<MenuItem *> items;
-	//std::vector<std::string> titles;
-	//LiquidCrystal *lcd;
-	//FanController *fcon;
 	int position;
 };
 

@@ -1,3 +1,4 @@
+
 /*
  * Menu.cpp
  *
@@ -17,11 +18,19 @@ Menu::~Menu()
 	// default dtor
 }
 
+/**
+*@brief 		Adds items to the menu.
+*@param item	: MenuItem to add to the menu
+*/
 void Menu::addItem(MenuItem *item)
 {
 	items.push_back(item);
 }
 
+/**
+*@brief 	Dispatches events to the menuitems to handle. Refreshes display
+*@param	e	: Event to handle
+*/
 void Menu::event(MenuItem::menuEvent e)
 {
 	if(items.size() <= 0) return;

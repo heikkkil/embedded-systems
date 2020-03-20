@@ -1,7 +1,7 @@
 /*
 ===============================================================================
  Name        : main.c
- Author      : $(author)
+ Author      : $(Jere, Heikki, Eelis)
  Version     :
  Copyright   : $(copyright)
  Description : main definition
@@ -51,20 +51,14 @@ static volatile uint32_t prev_systicks;
 static volatile uint32_t refresh_counter;
 static volatile uint8_t ok_pressed;
 
-//Array of type
-//static enum MenuItem::menuEvent e_Buffer[EVENT_BUFFER_SIZE];
 
 /*****************************************************************************
  * Public types/enumerations/variables
  ****************************************************************************/
-RingBuffer e_Ring(10);
 
+ RingBuffer e_Ring(10);
 
-//Ringbuffer frame
-//RINGBUFF_T e_Ring;
-
-
-/*****************************************************************************
+*****************************************************************************
  * Private functions
  ****************************************************************************/
 static void setup_Pin_Interrupts(){
@@ -114,16 +108,33 @@ static void setup_Pin_Interrupts(){
 	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(1));
 	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(1));
 
-	//Clear interrupt status of pins
-	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(2));
-	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(2));
-	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(2));
+
+ //Setup pin block and switches to send interrupts properly
+static void setup_Pin_Interrupts(){
+
+	Chip_PININT_Init(LPC_GPIO_PIN_INT);
+
+	DigitalIoPin SW1(0,0,true,true,true);
+	DigitalIoPin SW2(1,3,true,true,true);
+	DigitalIoPin SW3(0,9,true,true,true);
+	DigitalIoPin SW4(0,10,true,true,true);
+
+	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_PININT);
+
+	/* Reset the PININT block */
+	Chip_SYSCTL_PeriphReset(RESET_PININT);
+
+	//Link Interrupt channels to physical pins
+	Chip_INMUX_PinIntSel(0, 0, 0);
+	Chip_INMUX_PinIntSel(1, 1, 3);
+	Chip_INMUX_PinIntSel(2, 0, 10);
+	Chip_INMUX_PinIntSel(3, 0, 9);
 
 	//Clear interrupt status of pins
-	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(3));
-	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(3));
-	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(3));
-
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0)| PININTCH(1) | PININTCH(2) | PININTCH(3));
+	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(0)| PININTCH(1) | PININTCH(2) | PININTCH(3));
+	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(0)| PININTCH(1) | PININTCH(2) | PININTCH(3));
+	
 	//Enable IRQ's for pins
 	NVIC_ClearPendingIRQ(PIN_INT0_IRQn);
 	NVIC_EnableIRQ(PIN_INT0_IRQn);
@@ -143,10 +154,7 @@ static void setup_Pin_Interrupts(){
 #ifdef __cplusplus
 extern "C" {
 #endif
-/**
- * @brief	Handle interrupt from SysTick timer
- * @return	Nothing
- */
+
 void SysTick_Handler(void)
 {
 	systicks++;
@@ -179,6 +187,7 @@ void PIN_INT1_IRQHandler(void){
 	}
 	prev_systicks = systicks;
 	ok_pressed = OK_PRESSED;
+
 }
 
 void PIN_INT2_IRQHandler(void){
@@ -207,6 +216,8 @@ Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 
 /**
  * @brief 	Processes events in the eventbuffer.
+
+ * @param	menu : Menuobject that processes the events.
  */
 void processEvents(SimpleMenu& menu){
 
@@ -218,6 +229,10 @@ void processEvents(SimpleMenu& menu){
 	}
 }
 
+/**
+*@brief Program waits for a specified time amount
+*@param ms : How many millisecons to sleep for
+*/
 void Sleep(int ms)
 {
 	counter = ms;
@@ -289,7 +304,7 @@ int main(void)
 	LpcPinMap txpin = { 0, 18 }; // transmit pin that goes to debugger's UART->USB converter
 	LpcPinMap rxpin = { 0, 13 }; // receive pin that goes to debugger's UART->USB converter
 
-	//Uart config?For debugging or between arduino and LPC?-----------------------IS THIS NEEDED?
+	
 	LpcUartConfig cfg = { LPC_USART0, 115200, UART_CFG_DATALEN_8 | UART_CFG_PARITY_NONE | UART_CFG_STOPLEN_1, false, txpin, rxpin, none, none };
 	LpcUart dbgu(cfg);
 

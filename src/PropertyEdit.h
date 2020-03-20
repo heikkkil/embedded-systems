@@ -8,6 +8,9 @@
 #ifndef PROPERTYEDIT_H_
 #define PROPERTYEDIT_H_
 
+/**
+*@brief 	Base for editable menu items.
+*/
 class PropertyEdit {
 public:
 	PropertyEdit() {};

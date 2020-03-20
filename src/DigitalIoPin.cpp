@@ -17,6 +17,15 @@
 
 #include "DigitalIoPin.h"
 
+/**
+*@brief 		Wraps gpio configuration to a more understadable format
+*@param port 	: port number of a pin
+*@param pin 	: pin number of a pin
+*@param input 	: sets pin to input / output mode. True for input
+*@param pullup 	: sets pullup/pulldown. True for pullup
+*@param invert	: inverts active low to active high when true.
+*/
+
 DigitalIoPin::DigitalIoPin(int port, int pin, bool input, bool pullup, bool invert){
 	this->port = port;
 	this->pin = pin;

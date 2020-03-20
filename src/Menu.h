@@ -1,3 +1,4 @@
+
 /*
  * Menu.h
  *
@@ -12,7 +13,9 @@
 #include "MenuItem.h"
 #include "DigitalIoPin.h"
 
-
+/**
+*@brief 	Main manu object. Handles events and holds list of event items.
+*/
 class Menu {
 public:
 	Menu();
@@ -29,3 +32,4 @@ private:
 };
 
 #endif /* MENU_H_ */
+

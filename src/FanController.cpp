@@ -8,6 +8,13 @@
 #include "FanController.h"
 #include "I2C.h"
 
+/**
+*@brief								Interface for controlling the fan. 
+*@param conf					: 	Configuration object.
+*@param initialTargetPressure	:	Default target pressure value for auto mode
+*@param initialFanSpeed			:	Default fan speed for manual mode
+*/
+
 FanController::FanController(I2C_config conf, int initialTargetPressure = 80, int initialFanSpeed = 10000) : fan(2), pressureSensor(SENSOR_ADDRESS, conf) {
 	fanSpeed = initialFanSpeed;
 	targetPressure = initialTargetPressure;
@@ -76,11 +83,22 @@ void FanController::manual() {
 	fan.setNonRelativeFrequency(fanSpeed);
 }
 
+
+/**
+*@brief 		Sets a target pressure for automatic mode
+*@param	target 	: Target pressure	
+*/
+
 void FanController::setTargetPressure(int target) {
 	if (target >= 0 && target <= 255) {
 		targetPressure = target;
 	}
 }
+
+/**
+*@brief 		Sets a fixed speed for fan
+*@param speed 	: Target speed
+*/
 
 void FanController::setFanSpeed(int speed) {
 	if (mode == MANUAL) {
@@ -88,27 +106,58 @@ void FanController::setFanSpeed(int speed) {
 	}
 }
 
+
+/**
+*@brief			Set mode to automatic or manual
+*@param m		: Boolean value for mode. True for automatic, false for manual
+*/
+
 void FanController::setMode(bool m) {
 	mode = m;
 	autoOutOfLimits = 0;
 }
 
+
+/**
+*@brief			Getter for current pressure.
+*@return		Current pressure
+*/
 int FanController::getPressure() {
 	return pressure;
 }
+/**
+*@brief			Getter for fan speed
+*@return		Current fan speed	
+*/
 
 int FanController::getFanSpeed() {
 	return fanSpeed / 200;
 }
+
+
+/**
+*@brief			Getter for target pressure
+*@return		Current target pressure
+*/
 
 int FanController::getTargetPressure() {
 	return targetPressure;
 }
 
 
+/**
+*@brief			Getter for current mode
+*@return 		Current mode
+*/
+
 bool FanController::getMode() {
 	return mode;
 }
+
+/**
+*@brief			Checks is target pressure is reachable
+*@return		True for reachable
+*/
 
 bool FanController::isPressureReachable() {
 	return (autoOutOfLimits < NOT_REACHED_LIMIT);
