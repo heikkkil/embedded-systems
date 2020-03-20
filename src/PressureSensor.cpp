@@ -11,10 +11,12 @@
 
 #define SCALE_FACTOR 240
 
+
 /**
 *@param address		: Address of sensor
 *@param	conf		: Configuration object.
 */
+
 PressureSensor::PressureSensor(uint8_t address, I2C_config conf) :
 address(address), i2c(conf) {
 	index = -1;
@@ -27,10 +29,12 @@ PressureSensor::~PressureSensor() {
 	// TODO Auto-generated destructor stub
 }
 
+
 /**
 *@brief 	Geter for pressure
 *@return 	Returns median filtered pressure value.
 */
+
 int PressureSensor::getPressure() {
 	int raw = getRawMeasurement();
 	int pascal = raw / SCALE_FACTOR * 0.95f;

@@ -51,14 +51,63 @@ static volatile uint32_t prev_systicks;
 static volatile uint32_t refresh_counter;
 static volatile uint8_t ok_pressed;
 
+
 /*****************************************************************************
  * Public types/enumerations/variables
  ****************************************************************************/
+
  RingBuffer e_Ring(10);
 
-/*****************************************************************************
+*****************************************************************************
  * Private functions
  ****************************************************************************/
+static void setup_Pin_Interrupts(){
+
+	Chip_PININT_Init(LPC_GPIO_PIN_INT);
+
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 0,
+							 (IOCON_DIGMODE_EN |(0x2<<3) |IOCON_MODE_INACT) );
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 1, 3,
+							 (IOCON_DIGMODE_EN |(0x2<<3) |IOCON_MODE_INACT) );
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 9,
+							 (IOCON_DIGMODE_EN |(0x2<<3)| IOCON_MODE_INACT) );
+	Chip_IOCON_PinMuxSet(LPC_IOCON, 0, 10,
+							 (IOCON_DIGMODE_EN |(0x2<<3)| IOCON_MODE_INACT) );
+
+	/* Configure GPIO pin as input */
+	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 0);
+
+	/* Configure GPIO pin as input */
+	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 1, 3);
+
+	/* Configure GPIO pin as input */
+	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 9);
+
+	/* Configure GPIO pin as input */
+	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 10);
+
+
+	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_PININT);
+
+	/* Reset the PININT block */
+	Chip_SYSCTL_PeriphReset(RESET_PININT);
+
+	//Link Interrupt channels to physical pins
+	Chip_INMUX_PinIntSel(0, 0, 0);
+	Chip_INMUX_PinIntSel(1, 1, 3);
+	Chip_INMUX_PinIntSel(2, 0, 10);
+	Chip_INMUX_PinIntSel(3, 0, 9);
+
+	//Clear interrupt status of pins
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(0));
+	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(0));
+	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(0));
+
+	//Clear interrupt status of pins
+	Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT,PININTCH(1));
+	Chip_PININT_SetPinModeEdge(LPC_GPIO_PIN_INT,PININTCH(1));
+	Chip_PININT_EnableIntLow(LPC_GPIO_PIN_INT,PININTCH(1));
+
 
  //Setup pin block and switches to send interrupts properly
 static void setup_Pin_Interrupts(){
@@ -138,6 +187,7 @@ void PIN_INT1_IRQHandler(void){
 	}
 	prev_systicks = systicks;
 	ok_pressed = OK_PRESSED;
+
 }
 
 void PIN_INT2_IRQHandler(void){
@@ -149,6 +199,7 @@ void PIN_INT2_IRQHandler(void){
 }
 
 void PIN_INT3_IRQHandler(void){
+
 Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 	if(systicks - prev_systicks >= BOUNCER_LIMIT ){
 		e_Ring.add(MenuItem::back);
@@ -165,6 +216,7 @@ Chip_PININT_ClearIntStatus(LPC_GPIO_PIN_INT, PININTCH(3));
 
 /**
  * @brief 	Processes events in the eventbuffer.
+
  * @param	menu : Menuobject that processes the events.
  */
 void processEvents(SimpleMenu& menu){
@@ -176,6 +228,7 @@ void processEvents(SimpleMenu& menu){
 		menu.event(event);
 	}
 }
+
 /**
 *@brief Program waits for a specified time amount
 *@param ms : How many millisecons to sleep for

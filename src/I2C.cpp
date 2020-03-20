@@ -43,6 +43,7 @@
 *@brief			Setup I2C
 *@param cfg		: Configuration object
 */
+
 I2C::I2C(const I2C_config &cfg): device(nullptr) {
 	if(cfg.device_number == 0) {
 		device = LPC_I2C0;
@@ -75,6 +76,7 @@ I2C::I2C(const I2C_config &cfg): device(nullptr) {
 I2C::~I2C() {
 	// TODO Auto-generated destructor stub
 }
+
 /**
 *@brief		 		Write to a device
 *@param	devAdddr	: Device address to write to
@@ -82,6 +84,7 @@ I2C::~I2C() {
 *@param txSize		: Size of transmission
 *@return 			Returns true if operation was valid
 */
+
 bool I2C::write(uint8_t devAddr, uint8_t *txBuffPtr, uint16_t txSize)
 {
 	return transaction(devAddr, txBuffPtr, txSize, nullptr, 0);
@@ -94,10 +97,12 @@ bool I2C::write(uint8_t devAddr, uint8_t *txBuffPtr, uint16_t txSize)
 *@param rxSize		: Size of transmission
 *@return 			Returns true if operation was valid
 */
+
 bool I2C::read(uint8_t devAddr, uint8_t *rxBuffPtr, uint16_t rxSize)
 {
 	return transaction(devAddr, nullptr, 0, rxBuffPtr, rxSize);
 }
+
 
 /**
 *@brief		 		Read/write to and form a device
@@ -108,6 +113,7 @@ bool I2C::read(uint8_t devAddr, uint8_t *rxBuffPtr, uint16_t rxSize)
 *@param rxSize		: Size of receive
 *@return 			True if operation was valid
 */
+
 bool I2C::transaction(uint8_t devAddr, uint8_t *txBuffPtr, uint16_t txSize, uint8_t *rxBuffPtr, uint16_t rxSize) {
 	I2CM_XFER_T  i2cmXferRec;
 

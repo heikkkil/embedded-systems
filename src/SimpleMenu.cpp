@@ -32,3 +32,4 @@ void SimpleMenu::event(MenuItem::menuEvent e) {
 		items[position]->event(MenuItem::show);
 	}
 }
+

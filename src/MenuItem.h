@@ -11,9 +11,11 @@
 #include "PropertyEdit.h"
 #include "FanController.h"
 
+
 /**
 *@brief 	Item to add to the menu. Handles some events dispatched by the parent menu.
 */
+
 class MenuItem {
 public:
 	enum menuEvent {
@@ -22,7 +24,6 @@ public:
 		ok,
 		back,
 		show,
-		refresh
 	};
 	MenuItem(PropertyEdit *property, FanController *fancon);
 	virtual ~MenuItem();

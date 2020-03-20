@@ -11,9 +11,11 @@
 #include "I2C.h"
 #include <algorithm>
 
+
 /**
 *@brief 	Wrapper class for handling the pressuresensor
 */
+
 class PressureSensor {
 public:
 	PressureSensor(uint8_t address, I2C_config conf);

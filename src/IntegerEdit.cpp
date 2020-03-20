@@ -1,12 +1,14 @@
-/**
+
+/*
  * IntegerEdit.cpp
  *
  *  Created on: 2.2.2016
- *@Author	: krl
+ *      Author: krl
  */
 
 #include <cstdio>
 #include "IntegerEdit.h"
+
 /**
 *@brief 			Editable numerical value from which a menu item is created
 *@param	lcdoutput	: Pointer to lcd screen object
@@ -15,6 +17,7 @@
 *@param limit_lower	: Lower end limit of the numerical value that the edit can have.
 *@param limit_upper	: Higher end limit of the numerical value that the edit can have.
 */
+
 IntegerEdit::IntegerEdit(LiquidCrystal *lcdoutput, FanController *fancon, std::string editTitle, int limit_lower,int limit_upper):
 	lcd(lcdoutput), fcon(fancon), title(editTitle), lim_lower(limit_lower),lim_upper(limit_upper){
 	errcode = "ERROR";
@@ -34,6 +37,7 @@ IntegerEdit::~IntegerEdit() {
 /**
 *@brief 	Increment edit value
 */
+
 void IntegerEdit::increment() {
 	if (edit < lim_upper) {
 		++edit;
@@ -43,6 +47,7 @@ void IntegerEdit::increment() {
 /**
 *@brief 	Decrement edit value
 */
+
 void IntegerEdit::decrement() {
 	if (edit > lim_lower) {
 		--edit;
@@ -52,6 +57,7 @@ void IntegerEdit::decrement() {
 /**
 *@brief 	Commits changes to mode
 */
+
 void IntegerEdit::accept() {
 	if(title == "Auto  ") {
 		fcon->setMode(true);
@@ -64,20 +70,25 @@ void IntegerEdit::accept() {
 	save();
 }
 
+
 /**
 *@brief 	Cancel temporary changes to edit.
 */
+
 void IntegerEdit::cancel() {
 	edit = value;
 }
+
 
 /**
 *@brief 		Sets focus to selected item.
 *@param focus	: True to set focus, false to deselect item.
 */
+
 void IntegerEdit::setFocus(bool focus) {
 	this->focus = focus;
 }
+
 
 /**
 *@brief 	Increment edit value
@@ -90,6 +101,7 @@ bool IntegerEdit::getFocus() {
 *@brief 	 Prints to lcd screen
 */
 void IntegerEdit::display() {
+
 
 	int  p = fcon->getPressure();
 	int  s = fcon->getFanSpeed();
@@ -143,6 +155,7 @@ void IntegerEdit::display() {
 	lcd->print(row);
 }
 
+
 /**
 *@brief 	Commits changes to the edit value.
 */
@@ -161,6 +174,7 @@ int IntegerEdit::getValue() {
 /**
 *@brief 	Set edit to a specific value.
 */
+
 void IntegerEdit::setValue(int value) {
 
 	if(value>lim_upper ){
